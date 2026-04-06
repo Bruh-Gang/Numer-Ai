@@ -1,128 +1,57 @@
 # Numer-Ai
 
-Numerai LightGBM Automated Submission Pipeline
+My submission pipeline for the [Numerai](https://numer.ai) live equity prediction tournament. Train a LightGBM model on historical Numerai data, generate rank-normalized predictions for the current live round, and auto-upload — all in one script.
 
-This repository contains a complete machine learning pipeline for the Numerai tournament. The script trains a LightGBM regression model on historical Numerai data, generates predictions for the current live round, rank-normalizes those predictions, and automatically uploads the submission using the Numerai API.
+I've been running this against live rounds to get a feel for how ensemble gradient boosting handles the noisy, encrypted feature space Numerai throws at you.
 
-Overview
+---
 
-The pipeline performs the following steps:
+## What it does
 
-Loads Numerai feature metadata
+1. Loads feature metadata and picks the first 20 features from the `small` set (swap in `medium` or `all` for more signal)
+2. Trains a LightGBM regression model on eras 1–10
+3. Pulls the current live round via the Numerai API
+4. Rank-normalizes predictions to `[0, 1]` — Numerai's scoring rewards this distribution
+5. Saves a submission CSV and uploads it automatically
 
-Selects a subset of features for model training
+---
 
-Trains a LightGBM regression model on historical data
+## Setup
 
-Loads live data for the current Numerai round
+```bash
+pip install lightgbm numerapi pandas numpy scipy
+```
 
-Generates predictions using the trained model
+Set your credentials as environment variables (don't hard-code them):
 
-Rank-normalizes predictions to comply with Numerai requirements
+```bash
+export NUMERAI_PUBLIC_ID="your_public_id"
+export NUMERAI_SECRET_KEY="your_secret_key"
+export NUMERAI_MODEL_ID="your_model_id"
+export NUMERAI_DATA_DIR="~/Downloads"   # where your .parquet files live
+```
 
-Saves predictions to a submission CSV file
+Download your data files from the [Numerai data page](https://numer.ai/data) and drop them in `NUMERAI_DATA_DIR`.
 
-Uploads the submission directly to Numerai
+---
 
-This approach enables fully automated training and submission with minimal manual intervention.
+## Run
 
-Technologies Used
+```bash
+python numer_ai.py
+```
 
-Python 3.x
+---
 
-pandas
+## Notes
 
-numpy
+- Feature set is intentionally small for speed — the full `all` set uses a lot of RAM
+- Only eras 1–10 used for training here; add more for a more robust model
+- LightGBM params are a reasonable baseline, not heavily tuned yet — that's on the roadmap
+- For actual competition performance I'd add era-boosting, feature neutralization, and a proper CV split
 
-LightGBM
+---
 
-numerapi
+## Stack
 
-scipy
-
-Required Files
-
-The following files must be available locally before running the script:
-
-features.json
-Contains Numerai feature metadata and feature sets.
-
-train.parquet
-Historical Numerai training data.
-
-live_<round>.parquet
-Live data for the current Numerai tournament round.
-
-Update file paths in the script as needed to match your local environment.
-
-Pipeline Details
-1. Numerai API Configuration
-
-The script authenticates with Numerai using a public ID and secret key via numerapi. This enables programmatic access to the current tournament round and allows automated uploading of predictions.
-
-2. Feature Selection
-
-Feature metadata is loaded from features.json.
-
-The "small" feature set is used.
-
-The first 20 features from this set are selected for training.
-
-This limited feature set is intended for simplicity and faster experimentation.
-
-3. Training Data Preparation
-
-Historical data is loaded from train.parquet.
-
-Only eras 0001 through 0010 are used.
-
-Feature columns and target values are cast to float32 for memory efficiency.
-
-The dataset is then split into:
-
-Features (X)
-
-Target (y)
-
-4. Model Training
-
-A LightGBM regression model is trained with the following characteristics:
-
-Gradient Boosted Decision Trees (GBDT)
-
-Controlled tree depth to reduce overfitting
-
-Feature and bagging fractions for regularization
-
-The model is trained for 100 boosting rounds.
-
-5. Live Data Loading and Prediction
-
-The current Numerai round is retrieved via the API.
-
-The corresponding live data file is loaded.
-
-The script ensures that an id column exists (resetting the index if necessary).
-
-Predictions are generated using the trained model.
-
-6. Rank Normalization
-
-Numerai requires submissions to be rank-normalized rather than raw predictions.
-Predictions are therefore ranked and scaled to the interval [0, 1].
-
-7. Submission File Creation
-
-A CSV file is generated containing:
-
-id
-
-prediction
-
-The file is saved as:
-
-numerai_submission_<round>.csv
-
-8. Automated Submission
-
-The script uploads the submission file directly to Numerai using the provided model ID and the Numerai API.
+`Python` · `LightGBM` · `pandas` · `numpy` · `numerapi` · `scipy`
